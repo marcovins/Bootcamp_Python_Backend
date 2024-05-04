@@ -1,12 +1,14 @@
 # Programa: Conta Bancária v3
-# Autor: [Marcos Belo]
-# Data: [27/04/2024]
+# Autor: Marcos Belo
+# Data: 27/04/2024
 # Descrição: Resolução do desafio de código utilizando o paradigma orientado a objetos como forma de concretizar o conhecimento adquirido previamente em aula.
 
+# Importações necessárias
 from abc import ABC, abstractmethod, abstractproperty
 from datetime import datetime, time
 import bcrypt
 
+# Função para converter string em objeto datetime
 def converter_para_data(data_str: str, formato: str = "%d %m %Y"):
     try:
         data = datetime.strptime(data_str, formato)
@@ -15,16 +17,18 @@ def converter_para_data(data_str: str, formato: str = "%d %m %Y"):
         print("Formato de data incorreto. Certifique-se de que a data está no formato especificado.")
         return None
 
+# Função para gerar um hash de senha com salt
 def gerar_hash(senha:str):
     salt = bcrypt.gensalt()
     palavra_hash = bcrypt.hashpw(senha.encode('utf-8'), salt)
     return salt, palavra_hash
+
+# Definição da classe Cliente
 class Cliente:
     def __init__(self, endereco:str, senha:str):
         self.endereco = endereco
         self.contas = []
         self.salt ,self._hash_senha = gerar_hash(senha)
-
 
     def realizar_transacao(self, conta, transacao):
         transacao.registrar(conta)
@@ -38,15 +42,18 @@ class Cliente:
             return True
         return False
 
+# Definição da classe PessoaFisica, subclasse de Cliente
 class PessoaFisica(Cliente):
     def __init__(self, cpf:str, nome:str, data_nascimento:datetime, endereco:str, hash_senha:str):
         super().__init__(endereco, hash_senha)
         self.cpf = cpf
         self.nome = nome
         self.data_nascimento = data_nascimento
+
     def get_nome(self):
         return self.nome
 
+# Definição da classe Conta
 class Conta:
     numero = 0
     def __init__(self, cliente:Cliente):
@@ -58,24 +65,25 @@ class Conta:
         self._extrato = Historico()
         self._saque_diario = 0
 
-
+    # Método de classe para incrementar o número da conta
     @classmethod
     def incrementar_quantidade(cls):
         cls.numero +=1
 
+    # Método para obter o saldo da conta
     def get_saldo(self):
         return self._saldo
 
+    # Método de classe para criar uma nova conta
     @classmethod
     def nova_conta(cls, cliente:Cliente):
         return cls(cliente, cls.numero)
 
+    # Método para realizar um saque na conta
     def sacar(self, valor:float):
-
         if (valor > self._saldo):
             print("Saldo insuficiente!\n")
             return False
-
         elif valor > 0:
             self._saldo -= valor
             self._extrato.adicionar_transacao(Saque, valor)
@@ -85,34 +93,39 @@ class Conta:
             print("Valor inválido, deve ser maior que zero!\n")
             return False
 
-
+    # Método para realizar um depósito na conta
     def depositar(self, valor:float):
         if valor > 0:
             self._saldo += valor
             self._extrato.adicionar_transacao(Deposito, valor)
             return True
-
         else:
             print("Valor inválido, deve ser maior que zero!\n")
             return False
 
+# Definição da classe ContaCorrente, subclasse de Conta
 class ContaCorrente(Conta):
     def __init__(self,cliente:Cliente):
         super().__init__(cliente)
 
-
+# Definição da classe Historico
 class Historico:
     def __init__(self):
         self.historico = ""
+
+    # Método para adicionar uma transação ao histórico
     def adicionar_transacao(self, transacao, valor):
         operacao = transacao.__name__
         hora_atual = datetime.now().strftime('%H:%M')
         self.historico += (f"{operacao} de {valor:.2f} realizado às {hora_atual}\n")
 
+# Definição da classe Transacao (classe abstrata)
 class Transacao(ABC):
+    @abstractmethod
     def registrar(conta:Conta):
         pass
 
+# Definição da classe Saque, subclasse de Transacao
 class Saque(Transacao):
     extrato_saque = Historico()
 
@@ -120,13 +133,15 @@ class Saque(Transacao):
     def registrar(cls,conta:Conta, valor:float):
         cls.extrato_saque.adicionar_transacao(Saque, valor)
 
-
+# Definição da classe Deposito, subclasse de Transacao
 class Deposito(Transacao):
     extrato_deposito = Historico()
+
     @classmethod
     def registrar(cls,conta: Conta, valor: float):
         cls.extrato_deposito.adicionar_transacao(Deposito, valor)
 
+# Função para exibir o menu principal
 def menu(opcao=0):
     if not opcao:
         print("\n______________MENU_______________\n")
@@ -138,17 +153,18 @@ def menu(opcao=0):
         print("5 - CRIAR NOVA CONTA")
         print("0 - ENCERRAR")
         print("_________________________________\n")
-
     else:
         print("\n___________MENU DE EXTRATOS___________\n")
         print("Informe a operação desejada:")
         print("1 - EXTRATO DE CONTAS")
         print("2 - EXTRATO DE TODOS OS DEPÓSITOS")
         print("3 - EXTRATO DE TODOS OS SAQUES\n")
+
     escolha = int(input())
     print()
     return escolha
 
+# Função para buscar uma conta pelo número
 def buscar_conta(registro_conta, numero_conta):
     if len(registro_conta) > 0:
         for conta in registro_conta:
@@ -156,6 +172,7 @@ def buscar_conta(registro_conta, numero_conta):
                 return conta
     return False
 
+# Função para buscar um cliente pelo CPF
 def buscar_cliente(cpf, registro_usuarios):
     if len(registro_usuarios) > 0:
         for cliente in registro_usuarios:
@@ -163,16 +180,16 @@ def buscar_cliente(cpf, registro_usuarios):
                 return cliente
     return False
 
+# Função principal do programa
 def main():
-
     registro_saque = Saque()
     registro_deposito = Deposito()
     registro_usuarios = []
     registro_contas = []
     contador = 0
 
+    # Loop principal do programa
     while True:
-
         escolha = menu(0)
         match(escolha):
             case 1:  # Depósito
@@ -196,6 +213,7 @@ def main():
                 else:
                     print("Limite de transações diárias atingido.\n")
                     continue
+
             case 2:  # Saque
                 conta = int(input("Informe a conta que deseja realizar o saque:\n"))
                 conta_obj = buscar_conta(registro_contas, conta)
@@ -226,6 +244,7 @@ def main():
                 else:
                     print("A conta informada ainda não foi criada!\n")
                     continue
+
             case 3:
                 tipo = menu(1)
                 match(tipo):
@@ -247,10 +266,12 @@ def main():
                                 print()
                             else:
                                 print("Senha incorreta!\n")
+
                     case 2:
                         print(f"__________EXTRATO DE DEPÓSITOS_________\n\n")
                         print(registro_deposito.extrato_deposito.historico)
                         print()
+
                     case 3:
                         print(f"___________EXTRATO DE SAQUES__________\n\n")
                         print(registro_saque.extrato_saque.historico)
@@ -258,7 +279,6 @@ def main():
 
             case 4:  # Cadastrar novo usuário
                 cpf = input("informe o cpf do novo usuário:\n")
-
                 if not (buscar_cliente(cpf, registro_usuarios)):
                     nome = input("Informe o nome do usuário:\n")
                     data = input("Informe a data de nascimento:\n")
@@ -289,9 +309,5 @@ def main():
 
             case 0:
                 break
-
-
-
-
 
 main()
