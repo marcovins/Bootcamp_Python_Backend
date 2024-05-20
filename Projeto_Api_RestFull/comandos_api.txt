@@ -1,0 +1,5 @@
+uvicorn workout_api.main:app --reload 
+
+$env:PYTHONPATH += ";" + (Get-Location) alembic revision --autogenerate -m init_db
+
+alembic upgrade head
